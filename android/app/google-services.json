@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "234429057174",
+    "project_id": "project-latihan-penjualan",
+    "storage_bucket": "project-latihan-penjualan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234429057174:android:a2482a2d1768f4f4489ab7",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg0WPXf65O2DNuTqvdq7KLG9rdlc9PB3Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:234429057174:android:95f14f50dfb2901b489ab7",
+        "android_client_info": {
+          "package_name": "com.example.penerimaan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg0WPXf65O2DNuTqvdq7KLG9rdlc9PB3Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
