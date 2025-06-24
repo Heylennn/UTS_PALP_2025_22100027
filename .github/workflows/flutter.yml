@@ -2,7 +2,7 @@ name: Flutter CI
 
 on:
     push:
-        brances: [main]
+        branches: [main]
 
 jobs: 
     build:
@@ -19,8 +19,8 @@ jobs:
             - name: Install dependencies
               run: flutter pub get
 
-            -name: Build Web
-             run: flutter build web
+            - name: Build Web
+              run: flutter build web
 
         
 
