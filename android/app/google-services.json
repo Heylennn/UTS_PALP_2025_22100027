@@ -1,23 +1,13 @@
 {
   "project_info": {
-<<<<<<< HEAD
     "project_number": "234429057174",
     "project_id": "project-latihan-penjualan",
     "storage_bucket": "project-latihan-penjualan.firebasestorage.app"
-=======
-    "project_number": "607824099473",
-    "project_id": "palpnote",
-    "storage_bucket": "palpnote.firebasestorage.app"
->>>>>>> 907184831f0d3af6b13c949b650d1829f34524fb
   },
   "client": [
     {
       "client_info": {
-<<<<<<< HEAD
         "mobilesdk_app_id": "1:234429057174:android:a2482a2d1768f4f4489ab7",
-=======
-        "mobilesdk_app_id": "1:607824099473:android:40115bf7db3b57daea6730",
->>>>>>> 907184831f0d3af6b13c949b650d1829f34524fb
         "android_client_info": {
           "package_name": "com.example.flutter_application_1"
         }
@@ -25,7 +15,6 @@
       "oauth_client": [],
       "api_key": [
         {
-<<<<<<< HEAD
           "current_key": "AIzaSyDg0WPXf65O2DNuTqvdq7KLG9rdlc9PB3Q"
         }
       ],
@@ -46,9 +35,6 @@
       "api_key": [
         {
           "current_key": "AIzaSyDg0WPXf65O2DNuTqvdq7KLG9rdlc9PB3Q"
-=======
-          "current_key": "AIzaSyA8aSXgLkH_PVoF0-lzrzzxDlA8BIVlIuM"
->>>>>>> 907184831f0d3af6b13c949b650d1829f34524fb
         }
       ],
       "services": {
