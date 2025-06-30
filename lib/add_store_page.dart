@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'store_service.dart';
 
 class AddStorePage extends StatefulWidget {
   const AddStorePage({super.key});
@@ -34,9 +35,11 @@ class _AddStorePageState extends State<AddStorePage> {
       final name = _selectedStore!['name'];
       final storeRef = _selectedStore!.reference;
 
-      await prefs.setString('code', code);
+      await prefs.setString('store_code', code); 
       await prefs.setString('name', name);
       await prefs.setString('store_ref', storeRef.path);
+      await prefs.setString('store_code', code);  
+      await StoreService.setStoreCode(code);
 
       if (mounted) Navigator.pop(context);
     } else {

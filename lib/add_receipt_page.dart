@@ -11,7 +11,6 @@ class AddReceiptPage extends StatefulWidget {
 
 class _AddReceiptPageState extends State<AddReceiptPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _formNumberController = TextEditingController();
 
   DocumentReference? _selectedSupplier;
   DocumentReference? _selectedWarehouse;
@@ -27,7 +26,17 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
   @override
   void initState() {
     super.initState();
-    _fetchDropdownData();
+    _fetchDropdownData().then((_) {
+      if (_products.isNotEmpty) {
+        setState(() {
+          _productDetails.add(_DetailItem(
+            productRef: _products.first.reference,
+            price: 0,
+            qty: 1,
+          ));
+        });
+      }
+    });
   }
 
   Future<void> _fetchDropdownData() async {
@@ -46,164 +55,183 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
     if (!_formKey.currentState!.validate() ||
         _selectedSupplier == null ||
         _selectedWarehouse == null ||
-        _productDetails.isEmpty) {return;}
-        
+        _productDetails.isEmpty) {
+      return;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final storeRefPath = prefs.getString('store_ref');
     if (storeRefPath == null) return;
     final storeRef = FirebaseFirestore.instance.doc(storeRefPath);
 
+    final receipts = await FirebaseFirestore.instance
+        .collection('purchaseGoodsReceipts')
+        .orderBy('created_at', descending: true)
+        .get();
+
+    final nextNumber = receipts.size + 1;
+    final noForm = 'PO-${nextNumber.toString().padLeft(4, '0')}';
+
     final receiptData = {
-      'no_form': _formNumberController.text.trim(),
+      'no_form': noForm,
       'grandtotal': grandTotal,
       'item_total': itemTotal,
-      'post_date': DateTime.now().toIso8601String(),
-      'created_at': DateTime.now(),
       'store_ref': storeRef,
       'supplier_ref': _selectedSupplier,
       'warehouse_ref': _selectedWarehouse,
-      'synced': true,
+      'created_at': FieldValue.serverTimestamp(),
+      'post_date': null,
+      'synced': false,
     };
 
-    final receiptDoc = await FirebaseFirestore.instance.collection('purchaseGoodsReceipts').add(receiptData);
+    final receiptRef = await FirebaseFirestore.instance.collection('purchaseGoodsReceipts').add(receiptData);
 
     for (final item in _productDetails) {
-      await receiptDoc.collection('details').add(item.toMap());
+      await FirebaseFirestore.instance.collection('purchaseGoodsReceiptDetails').add({
+        'product_ref': item.productRef,
+        'qty': item.qty,
+        'price': item.price,
+        'subtotal': item.subtotal,
+        'receipt_ref': receiptRef,
+      });
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final productSnapshot = await transaction.get(item.productRef);
+        final currentStock = productSnapshot.get('stock') ?? 0;
+        final currentJumlah = productSnapshot.get('jumlah') ?? 0;
+        final newStock = currentStock + item.qty;
+        final newJumlah = currentJumlah + item.qty;
+
+        transaction.update(item.productRef, {
+          'stock': newStock,
+          'jumlah': newJumlah,
+        });
+      });
     }
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Receipt berhasil disimpan')),
+      );
+      Navigator.pop(context, 'added');
+    }
   }
 
   void _addProductRow() {
-    setState(() {
-      _productDetails.add(_DetailItem(products: _products));
-    });
+    setState(() => _productDetails.add(_DetailItem(
+          productRef: _products.first.reference,
+          price: 0,
+          qty: 1,
+        )));
   }
 
   void _removeProductRow(int index) {
-    setState(() {
-      _productDetails.removeAt(index);
-    });
+    setState(() => _productDetails.removeAt(index));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Tambah Receipt')),
+      appBar: AppBar(title: const Text('Tambah Receipt')),
       body: _products.isEmpty
-          ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    TextFormField(
-                style: TextStyle(fontSize: 16),
-                      controller: _formNumberController,
-                      decoration: InputDecoration(labelText: 'No. Form'),
-                      validator: (value) => value!.isEmpty ? 'Wajib diisi' : null,
-                    ),
-                    SizedBox(height: 16),
-                    DropdownButtonFormField<DocumentReference>(
-                      items: _suppliers.map((doc) {
-                        return DropdownMenuItem(
+          ? const Center(child: CircularProgressIndicator())
+          : Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  DropdownButtonFormField<DocumentReference>(
+                    decoration: const InputDecoration(labelText: 'Supplier'),
+                    items: _suppliers.map((doc) => DropdownMenuItem(
                           value: doc.reference,
                           child: Text(doc['name']),
-                        );
-                      }).toList(),
-                      onChanged: (value) => setState(() => _selectedSupplier = value),
-                      decoration: InputDecoration(labelText: "Supplier"),
-                      validator: (value) => value == null ? 'Pilih supplier' : null,
-                    ),
-                    DropdownButtonFormField<DocumentReference>(
-                      items: _warehouses.map((doc) {
-                        return DropdownMenuItem(
+                        )).toList(),
+                    onChanged: (value) => setState(() => _selectedSupplier = value),
+                    validator: (val) => val == null ? 'Wajib pilih supplier' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<DocumentReference>(
+                    decoration: const InputDecoration(labelText: 'Gudang'),
+                    items: _warehouses.map((doc) => DropdownMenuItem(
                           value: doc.reference,
                           child: Text(doc['name']),
-                        );
-                      }).toList(),
-                      onChanged: (value) => setState(() => _selectedWarehouse = value),
-                      decoration: InputDecoration(labelText: "Warehouse"),
-                      validator: (value) => value == null ? 'Pilih warehouse' : null,
-                    ),
-                    SizedBox(height: 24),
-                    Text("Detail Produk", style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    ..._productDetails.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      return Card(
-                        margin: EdgeInsets.symmetric(vertical: 8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              DropdownButtonFormField<DocumentReference>(
-                                value: item.productRef,
-                                items: _products.map((doc) {
-                                  return DropdownMenuItem(
-                                    value: doc.reference,
-                                    child: Text(doc['name']),
-                                  );
-                                }).toList(),
-                                onChanged: (value) => setState(() {
-                                  item.productRef = value;
-                                  item.unitName = value!.id == '1' ? 'pcs' : 'dus';
-                                }),
-                                decoration: InputDecoration(labelText: "Produk"),
-                                validator: (value) => value == null ? 'Pilih produk' : null,
-                              ),
-                              TextFormField(
-                style: TextStyle(fontSize: 16),
-                                initialValue: item.price.toString(),
-                                decoration: InputDecoration(labelText: "Harga"),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) => setState(() {
-                                  item.price = int.tryParse(val) ?? 0;
-                                }),
-                                validator: (val) => val!.isEmpty ? 'Wajib diisi' : null,
-                              ),
-                              TextFormField(
-                style: TextStyle(fontSize: 16),
-                                initialValue: item.qty.toString(),
-                                decoration: InputDecoration(labelText: "Jumlah"),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) => setState(() {
-                                  item.qty = int.tryParse(val) ?? 1;
-                                }),
-                                validator: (val) => val!.isEmpty ? 'Wajib diisi' : null,
-                              ),
-                              SizedBox(height: 8),
-                              Text("Satuan: ${item.unitName}"),
-                              Text("Subtotal: ${item.subtotal}"),
-                              SizedBox(height: 4),
-                              TextButton.icon(
-                                onPressed: () => _removeProductRow(index),
-                                icon: Icon(Icons.remove_circle, color: Colors.red),
-                                label: Text("Hapus Produk"),
-                              ),
-                            ],
-                          ),
+                        )).toList(),
+                    onChanged: (value) => setState(() => _selectedWarehouse = value),
+                    validator: (val) => val == null ? 'Wajib pilih gudang' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  Text("Detail Produk", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ..._productDetails.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            DropdownButtonFormField<DocumentReference>(
+                              value: item.productRef,
+                              items: _products.map((doc) {
+                                return DropdownMenuItem(
+                                  value: doc.reference,
+                                  child: Text(doc['name']),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                if (value != null) {
+                                  setState(() => item.productRef = value);
+                                }
+                              },
+                              decoration: const InputDecoration(labelText: "Produk"),
+                              validator: (value) => value == null ? 'Pilih produk' : null,
+                            ),
+                            TextFormField(
+                              initialValue: item.price.toString(),
+                              decoration: const InputDecoration(labelText: "Harga"),
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) => setState(() {
+                                item.price = int.tryParse(val) ?? 0;
+                              }),
+                              validator: (val) => val == null || val.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            TextFormField(
+                              initialValue: item.qty.toString(),
+                              decoration: const InputDecoration(labelText: "Jumlah"),
+                              keyboardType: TextInputType.number,
+                              onChanged: (val) => setState(() {
+                                item.qty = int.tryParse(val) ?? 1;
+                              }),
+                              validator: (val) => val == null || val.isEmpty ? 'Wajib diisi' : null,
+                            ),
+                            const SizedBox(height: 8),
+                            Text("Subtotal: ${item.subtotal}"),
+                            TextButton.icon(
+                              onPressed: () => _removeProductRow(index),
+                              icon: const Icon(Icons.remove_circle, color: Colors.red),
+                              label: const Text("Hapus Produk"),
+                            ),
+                          ],
                         ),
-                      );
-                    }),
-                    ElevatedButton.icon(
-                      onPressed: _addProductRow,
-                      icon: Icon(Icons.add),
-                      label: Text('Tambah Produk'),
-                    ),
-                    SizedBox(height: 16),
-                    Text("Item Total: $itemTotal"),
-                    Text("Grand Total: $grandTotal"),
-                    SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _saveReceipt,
-                      child: Text('Simpan Receipt'),
-                    ),
-                  ],
-                ),
+                      ),
+                    );
+                  }),
+                  ElevatedButton.icon(
+                    onPressed: _addProductRow,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah Produk'),
+                  ),
+                  const SizedBox(height: 16),
+                  Text("Item Total: $itemTotal"),
+                  Text("Grand Total: $grandTotal"),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _saveReceipt,
+                    child: const Text('Simpan Receipt'),
+                  ),
+                ],
               ),
             ),
     );
@@ -211,23 +239,14 @@ class _AddReceiptPageState extends State<AddReceiptPage> {
 }
 
 class _DetailItem {
-  DocumentReference? productRef;
-  int price = 0;
-  int qty = 1;
-  String unitName = 'unit';
-  final List<DocumentSnapshot> products;
+  DocumentReference productRef;
+  int qty;
+  int price;
+  int get subtotal => qty * price;
 
-  _DetailItem({required this.products});
-
-  int get subtotal => price * qty;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'product_ref': productRef,
-      'price': price,
-      'qty': qty,
-      'unit_name': unitName,
-      'subtotal': subtotal,
-    };
-  }
+  _DetailItem({
+    required this.productRef,
+    required this.qty,
+    required this.price,
+  });
 }

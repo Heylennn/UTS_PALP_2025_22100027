@@ -56,33 +56,6 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
     });
   }
 
-  void _updateReceipt() async {
-    if (!_formKey.currentState!.validate() ||
-        _selectedSupplier == null ||
-        _selectedWarehouse == null ||
-        _productDetails.isEmpty) return;
-
-    await widget.receiptRef.update({
-      'no_form': _formNumberController.text.trim(),
-      'supplier_ref': _selectedSupplier,
-      'warehouse_ref': _selectedWarehouse,
-      'item_total': itemTotal,
-      'grandtotal': grandTotal,
-      'updated_at': DateTime.now(),
-    });
-
-    final detailsRef = widget.receiptRef.collection('details');
-    final existingDetails = await detailsRef.get();
-    for (var doc in existingDetails.docs) {
-      await doc.reference.delete();
-    }
-    for (var item in _productDetails) {
-      await detailsRef.add(item.toMap());
-    }
-
-    if(mounted){Navigator.pop(context, 'updated');}
-  }
-
   void _removeProductRow(int index) {
     setState(() => _productDetails.removeAt(index));
   }
@@ -91,40 +64,36 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
     setState(() => _productDetails.add(_DetailItem(products: _products)));
   }
 
-  void _confirmDeleteReceipt() async {
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Konfirmasi'),
-        content: Text('Yakin ingin menghapus receipt ini? Semua detail akan ikut terhapus.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  Future<void> _updateReceipt() async {
+    if (_formKey.currentState?.validate() != true) return;
 
-    if (shouldDelete != true) return;
-    final detailsRef = widget.receiptRef.collection('details');
-    final detailDocs = await detailsRef.get();
-    for (var doc in detailDocs.docs) {
-      await doc.reference.delete();
+    try {
+      await widget.receiptRef.update({
+        'no_form': _formNumberController.text,
+        'supplier_ref': _selectedSupplier,
+        'warehouse_ref': _selectedWarehouse,
+        'grandtotal': grandTotal,
+        'itemtotal': itemTotal,
+        'updated_at': Timestamp.now(),
+      });
+
+      final existingDetails = await widget.receiptRef.collection('details').get();
+      for (var doc in existingDetails.docs) {
+        await doc.reference.delete();
+      }
+
+      for (final detail in _productDetails) {
+        await widget.receiptRef.collection('details').add(detail.toMap());
+      }
+
+      if (mounted) {
+        Navigator.pop(context, 'updated');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengupdate: $e')),
+      );
     }
-
-    await widget.receiptRef.delete();
-
-    await FirebaseFirestore.instance
-        .collection('purchaseGoodsReceipts')
-        .doc(widget.receiptRef.id)
-        .delete();
-
-    if(mounted){Navigator.pop(context, 'deleted');};
   }
 
   @override
@@ -140,7 +109,7 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
                 child: ListView(
                   children: [
                     TextFormField(
-              style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16),
                       controller: _formNumberController,
                       decoration: InputDecoration(labelText: 'No. Form'),
                       validator: (value) => value!.isEmpty ? 'Wajib diisi' : null,
@@ -180,7 +149,7 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               DropdownButtonFormField<DocumentReference>(
                                 value: item.productRef,
@@ -198,7 +167,7 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
                                 validator: (value) => value == null ? 'Pilih produk' : null,
                               ),
                               TextFormField(
-              style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 16),
                                 initialValue: item.price.toString(),
                                 decoration: InputDecoration(labelText: "Harga"),
                                 keyboardType: TextInputType.number,
@@ -208,7 +177,7 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
                                 validator: (val) => val!.isEmpty ? 'Wajib diisi' : null,
                               ),
                               TextFormField(
-              style: TextStyle(fontSize: 16),
+                                style: TextStyle(fontSize: 16),
                                 initialValue: item.qty.toString(),
                                 decoration: InputDecoration(labelText: "Jumlah"),
                                 keyboardType: TextInputType.number,
@@ -242,16 +211,7 @@ class _EditReceiptModalState extends State<EditReceiptModal> {
                     SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _updateReceipt,
-                      child: Text('Update Receipt'),
-                    ),
-                    SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: _confirmDeleteReceipt,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text('Hapus Receipt'),
+                      child: const Text('Update Receipt'),
                     ),
                   ],
                 ),

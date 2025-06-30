@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 import 'add_product_page.dart';
 import 'edit_product_page.dart';
 
@@ -12,105 +11,101 @@ class ProductListPage extends StatefulWidget {
 }
 
 class _ProductListPageState extends State<ProductListPage> {
-  List<DocumentSnapshot> _products = [];
-  bool _loading = true;
-  String? _kodeToko;
+  final _productStream = FirebaseFirestore.instance.collection('products').snapshots();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProducts();
+  Future<void> _confirmDeleteProduct(String id) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi'),
+        content: const Text('Yakin ingin menghapus produk ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await FirebaseFirestore.instance.collection('products').doc(id).delete();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Produk berhasil dihapus')),
+        );
+      }
+    }
   }
 
-  Future<void> _loadProducts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final kodeToko = prefs.getString('code');
-
-    if (kodeToko == null) return;
-
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('products')
-        .where('kode_toko', isEqualTo: kodeToko)
-        .get();
-
-    setState(() {
-      _kodeToko = kodeToko;
-      _products = querySnapshot.docs;
-      _loading = false;
-    });
-  }
-
-  Future<void> _deleteProduct(DocumentReference ref) async {
-    await ref.delete();
-    await _loadProducts();
-  }
+  // Hapus fungsi _refreshPage
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Daftar Produk')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _products.isEmpty
-              ? const Center(child: Text('Belum ada produk.'))
-              : ListView.builder(
-                  itemCount: _products.length,
-                  itemBuilder: (context, index) {
-                    final data = _products[index].data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(data['name'] ?? '-'),
-                      subtitle: Text('Jumlah: ${data['jumlah']}'),
-                      onTap: () async {
-                        final result = await Navigator.push(
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _productStream,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return const Center(child: Text('Belum ada produk.'));
+          }
+
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data() as Map<String, dynamic>;
+              final id = docs[index].id;
+
+              return ListTile(
+                title: Text(data['name'] ?? '-'),
+                subtitle: Text('Jumlah: ${data['jumlah'] ?? 0}'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.orange),
+                      onPressed: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => EditProductPage(
-                              productRef: _products[index].reference,
+                              productRef: docs[index].reference,
                               productData: data,
                             ),
                           ),
                         );
-                        if (result == 'updated') {
-                          await _loadProducts();
-                        }
+                        // no need to refresh manually
                       },
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text("Hapus Produk"),
-                              content: const Text("Yakin ingin menghapus produk ini?"),
-                              actions: [
-                                TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text("Batal")),
-                                TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text("Hapus")),
-                              ],
-                            ),
-                          );
-                          if (confirm == true) {
-                            await _deleteProduct(_products[index].reference);
-                          }
-                        },
-                      ),
-                    );
-                  },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => _confirmDeleteProduct(id),
+                    ),
+                  ],
                 ),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
         onPressed: () async {
-          final result = await Navigator.push(
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const AddProductPage()),
           );
-          if (result == 'added') {
-            await _loadProducts();
-          }
+          // no need to refresh manually
         },
-        child: const Icon(Icons.add),
       ),
     );
   }

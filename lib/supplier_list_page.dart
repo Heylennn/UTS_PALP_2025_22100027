@@ -42,10 +42,6 @@ class _SupplierListPageState extends State<SupplierListPage> {
     }
   }
 
-  Future<void> _refreshPage() async {
-    setState(() {}); // trigger rebuild
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,13 +69,13 @@ class _SupplierListPageState extends State<SupplierListPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit),
+                      icon: const Icon(Icons.edit, color: Colors.orange),
                       onPressed: () async {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => EditSupplierPage(supplierId: id)),
                         );
-                        _refreshPage(); // refresh after edit
+                        // no need to refresh manually
                       },
                     ),
                     IconButton(
@@ -100,7 +96,7 @@ class _SupplierListPageState extends State<SupplierListPage> {
             context,
             MaterialPageRoute(builder: (_) => const AddSupplierPage()),
           );
-          _refreshPage(); // refresh after add
+          // no need to refresh manually
         },
       ),
     );

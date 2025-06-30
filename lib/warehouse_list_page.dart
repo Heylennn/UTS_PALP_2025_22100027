@@ -42,9 +42,7 @@ class _WarehouseListPageState extends State<WarehouseListPage> {
     }
   }
 
-  Future<void> _refreshPage() async {
-    setState(() {});
-  }
+  // Hapus fungsi _refreshPage
 
   @override
   Widget build(BuildContext context) {
@@ -73,13 +71,13 @@ class _WarehouseListPageState extends State<WarehouseListPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.edit),
+                      icon: const Icon(Icons.edit, color: Colors.orange),
                       onPressed: () async {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => EditWarehousePage(warehouseId: id)),
                         );
-                        _refreshPage();
+                        // Tidak perlu refresh manual karena StreamBuilder sudah realtime
                       },
                     ),
                     IconButton(
@@ -100,7 +98,7 @@ class _WarehouseListPageState extends State<WarehouseListPage> {
             context,
             MaterialPageRoute(builder: (_) => const AddWarehousePage()),
           );
-          _refreshPage();
+          // Tidak perlu refresh manual
         },
       ),
     );
