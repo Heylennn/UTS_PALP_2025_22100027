@@ -4,24 +4,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'receipt_list_page.dart';
-import 'add_receipt_page.dart';
+// import 'add_receipt_page.dart';
 import 'add_store_page.dart';
-import 'edit_receipt_page.dart';
-import 'add_supplier_page.dart';
-import 'edit_supplier_page.dart';
+// import 'edit_receipt_page.dart';
+// import 'add_supplier_page.dart';
+// import 'edit_supplier_page.dart';
 import 'supplier_list_page.dart';
-import 'add_warehouse_page.dart';
-import 'edit_warehouse_page.dart';
+// import 'add_warehouse_page.dart';
+// import 'edit_warehouse_page.dart';
 import 'warehouse_list_page.dart';
-import 'add_product_page.dart';
-import 'edit_product_page.dart';
+// import 'add_product_page.dart';
+// import 'edit_product_page.dart';
 import 'product_list_page.dart';
 import 'sales_page.dart';
-import 'add_sales_page.dart';
-import 'edit_sales_page.dart';
-import 'add_delivery_page.dart';
-import 'edit_delivery_page.dart'; 
+// import 'add_sales_page.dart';
+// import 'edit_sales_page.dart';
+// import 'add_delivery_page.dart';
+// import 'edit_delivery_page.dart'; 
 import 'delivery_list_page.dart';
+import 'add_mutasi_page.dart';
 
 
 
@@ -37,7 +38,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+        debugShowCheckedModeBanner: false,
       title: "UTS Heylen",
       theme: ThemeData(
         primarySwatch: Colors.indigo,
