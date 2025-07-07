@@ -3,13 +3,11 @@
     "project_number": "234429057174",
     "project_id": "project-latihan-penjualan",
     "storage_bucket": "project-latihan-penjualan.firebasestorage.app"
-
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:234429057174:android:a2482a2d1768f4f4489ab7",
-
         "android_client_info": {
           "package_name": "com.example.flutter_application_1"
         }
